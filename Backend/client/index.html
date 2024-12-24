@@ -1,0 +1,148 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Socket Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://rawgit.com/abodelot/jquery.json-viewer/master/json-viewer/jquery.json-viewer.js"></script>
+    <link
+      href="https://rawgit.com/abodelot/jquery.json-viewer/master/json-viewer/jquery.json-viewer.css"
+      type="text/css"
+      rel="stylesheet"
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' 'unsafe-inline'"
+    />
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var messages = {
+        "test-message": {
+          userId: "615aa00ac66fa730a440375a",
+          roomId: "618cc53d46705705bc0311d3",
+        },
+        "user-connected": {
+          userId: "66ebe50cbae70c7764bcdb54",
+        },
+        sendMessage: {
+          userId: "66ebe50cbae70c7764bcdb54",
+          messageText: "Add massage from socket",
+          conversationId: "675fd104b342643ecf10ee83",
+        },
+        blockUser: {
+          userId: "66ebe50cbae70c7764bcdb54",
+          conversationId: "675fd104b342643ecf10ee83",
+        },
+      };
+
+      var socket = io();
+
+      socket.on("connect_error", (err) => {
+        console.log(`connect_error due to ${err.message}`);
+      });
+
+      socket.on("user-connected", function (data) {
+        console.log("data: ", data);
+      });
+
+      socket.on("disconnect", console.log);
+
+      socket.on("connect", function (data) {
+        console.log("connected:->", socket.id);
+      });
+
+      socket.on("blockUser", function (data) {
+        console.log("data: ", data);
+      });
+
+      function onChange() {
+        var address = document.getElementById("address").value;
+        var message = messages[address];
+
+        document.getElementById("message").value = JSON.stringify(message);
+      }
+
+      function onClickOnSubmit() {
+        console.log("socket: ", socket);
+        if (!socket || !socket.connected) {
+          alert("Socket is not connected. Please try again.");
+          return;
+        }
+        var key = document.getElementById("address").value || "";
+        var message = document.getElementById("message").value || "";
+
+        if (!key || !message) {
+          alert("Invalid parameter");
+          return;
+        }
+        let json;
+        try {
+          json = eval("(" + message + ")");
+        } catch (e) {
+          json = message;
+        }
+        console.log("key: ", key);
+        console.log("json: ", json);
+
+        socket.emit(key, JSON.parse(json), function (data) {
+          console.log("RESPONSE:->", data);
+        });
+      }
+
+      function showInJSONViewer(input) {
+        var options = {
+          collapsed: false,
+          withQuotes: true,
+        };
+        $("#json-renderer").jsonViewer(input, options);
+      }
+    </script>
+  </head>
+
+  <body>
+    <ul id="chatMessage"></ul>
+    <form name="myForm">
+      <table>
+        <tr>
+          <th>
+            <label>Key</label>
+          </th>
+          <td>
+            <select id="address" name="address" onchange="onChange()">
+              <option></option>
+              <option value="user-connected">user-connected</option>
+              <option value="test-message">test-message</option>
+              <option value="sendMessage">sendMessage</option>
+              <option value="blockUser">blockUser</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th colspan="2">&nbsp;</th>
+        </tr>
+        <tr>
+          <th>
+            <label>Message (string/json)</label>
+          </th>
+          <td>
+            <textarea rows="10" cols="80" id="message"></textarea>
+          </td>
+        </tr>
+        <tr>
+          <th>&nbsp;</th>
+          <td>
+            <input
+              type="button"
+              value="Send"
+              name=""
+              onclick="onClickOnSubmit()"
+            />
+          </td>
+        </tr>
+      </table>
+    </form>
+    <br />
+    <h3>On-Response</h3>
+    <pre id="json-renderer"></pre>
+  </body>
+</html>
